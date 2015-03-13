@@ -1,0 +1,23 @@
+{
+    "name": "vir-mir/traversal_router",
+    "type": "library",
+    "description": "PHP Traversal Router",
+    "keywords": ["traversal", "router", "routing", "php", "rest"],
+    "homepage": "https://github.com/vir-mir/TraversalRouterPHP",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Firsov Alex",
+            "email": "virmir49@gmail.com",
+            "homepage": "http://trphp.ru/"
+        }
+    ],
+    "require": {
+        "php": ">=5.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "TraversalRouterPHP\\": "src/TraversalRouterPHP/"
+        }
+    }
+}
