@@ -10,11 +10,11 @@ namespace TraversalRouterPHP;
 
 use TraversalRouterPHP\Exception\Traversal as ExceptionTraversal;
 
-class Traversal {
+abstract class Traversal {
 
     private $namespace;
-
-    private $template;
+    private $namespaceMain;
+    private $dir;
 
     /**
      * @var \TraversalRouterPHP\Action
@@ -29,10 +29,14 @@ class Traversal {
 
 
 
-    public function __construct($namespace, $template, $parent = null) {
-        $this->namespace = $namespace;
-        $this->template = $template;
+    public function __construct($dir, $parent = null) {
+        $namespace = explode('\\', get_class($this));
+        array_pop($namespace);
+        $this->namespace = implode('\\', $namespace);
+        array_pop($namespace);
+        $this->namespaceMain = implode('\\', $namespace);
         $this->parent = $parent;
+        $this->dir = $dir;
     }
 
 
@@ -43,24 +47,14 @@ class Traversal {
      */
     public function match($urls) {
 
-        $url = reset($urls) ? ucfirst(reset($urls)) : false;
-        $object = $this->namespace . '\\' . $url . '\\Route.php';
+        $urls = $this->getObjectParam(is_array($urls) ? $urls : [$urls], $object, $param);
+        $this->logic($object, $param);
 
-        if (class_exists($object)) {
-            array_shift($urls);
-            $object = new $object($this->namespace, $this->template, $this);
-            if (count($urls) > 1) {
-                $url = $urls[1];
-                if (!class_exists($this->namespace . '\\' . $url . '\\Route.php')) {
-                    array_shift($urls);
-                }
-            }
-            return $object->match($urls);
+        if (!$urls) {
+            return $object;
         }
 
-        $this->logic($urls);
-
-        return $this;
+        return $object->match($urls);
     }
 
     /**
@@ -71,43 +65,54 @@ class Traversal {
     }
 
     /**
-     * @return null|$this
+     * @return null|Traversal
      */
     public function getParent() {
         return $this->parent;
     }
 
-
     /**
-     * @param string[] $urls
-     * @param \TraversalRouterPHP\Action $object
-     * @return bool
-     */
-    protected function isAction($urls, $object) {
-        if (count($urls) > 2 || count($urls) < 1) {
-            return false;
-        }
-        $action = 'action' . ucfirst(array_shift($urls));
-
-        if (method_exists($object, $action)) {
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * @param string[] $urls
+     * @param Traversal $object
+     * @param string[] $param
      * @throws ExceptionTraversal
      */
-    protected function logic($urls) {
-        $object = __NAMESPACE__ . '\\Logic.php';
+    protected function logic($object, $param) {
+        $objectLogic = $object->namespace. '\\Logic';
 
-        if (class_exists($object)) {
-            $action = new $object($urls);
+        if (file_exists($this->dir . '/' . str_replace('\\', '/', $objectLogic) . '.php')) {
+            $object->action = new $objectLogic($param);
         } else {
-            throw new ExceptionTraversal('undefined action for the traversal "' . get_class($this) . '".');
+            throw new ExceptionTraversal('undefined action for the traversal "' . get_class($object) . '".');
         }
+    }
+
+    protected function getObjectParam($urls, &$object, &$param) {
+        $urls = $urls ? $urls : [];
+        $param = [];
+        while ($urls) {
+            $url = array_shift($urls);
+            $objectName = $this->getObjectName($url);
+            if ($objectName) {
+                $object = new $objectName($this->dir, $this);
+                break;
+            } else {
+                array_push($param, $url);
+            }
+        }
+
+        if (!$object) $object = $this;
+
+        return $urls;
+    }
+
+    protected function getObjectName($url) {
+        $objectNames = [$url, substr($url, 0, -1), substr($url, 0, -2)];
+        foreach ($objectNames as $url) {
+            $objectName = $this->namespaceMain . '\\' . ucfirst($url) . '\\Route';
+            $file = $this->dir . '/' . str_replace('\\', '/', $objectName) . '.php';
+            if (file_exists($file)) return $objectName;
+        }
+        return false;
     }
 
 } 

@@ -22,7 +22,7 @@ abstract class Action
         'Pragma: no-cache',
     ];
 
-    protected $methods = [];
+    protected $methods = ['get'];
 
 
     public function __construct($data)
@@ -50,8 +50,16 @@ abstract class Action
         return $this->headers;
     }
 
-    protected function isMethod($method) {
-        return in_array($method, $this->methods);
+    /**
+     * @return array
+     */
+    public function getData()
+    {
+        return $this->data;
+    }
+
+    public function isMethod($method) {
+        return in_array(strtolower($method), array_map('strtolower', $this->methods));
     }
 
     /**
